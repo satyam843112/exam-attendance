@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exam Attendance — QR Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink: #1B2A4A;
+    --paper: #F7F1E3;
+    --paper-line: #C9BFA5;
+    --rule: #8CA0BE;
+    --red-pen: #B23A2E;
+    --graphite: #3A3A3A;
+    --success: #2F6F4E;
+    --paper-shadow: rgba(27,42,74,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 34px;
+    background-position: 0 92px;
+    color: var(--graphite);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+  .masthead{
+    text-align:center;
+    padding-bottom: 18px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 26px;
+    position:relative;
+  }
+  .masthead .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:2.5px;
+    text-transform:uppercase;
+    color: var(--rule);
+    margin-bottom:6px;
+  }
+  .masthead h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size: 30px;
+    color: var(--ink);
+    margin:0;
+    letter-spacing:-0.3px;
+  }
+  .masthead .sub{
+    font-size:13px;
+    color:#6b6152;
+    margin-top:6px;
+    font-style:italic;
+    font-family:'Fraunces', serif;
+  }
+
+  /* ---------- Card ---------- */
+  .card{
+    background: #FFFDF7;
+    border: 1px solid var(--paper-line);
+    border-radius: 4px;
+    padding: 26px 24px;
+    box-shadow: 0 10px 24px var(--paper-shadow);
+  }
+  .field{ margin-bottom: 20px; }
+  .field label{
+    display:block;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:1.4px;
+    text-transform:uppercase;
+    color: var(--ink);
+    margin-bottom:7px;
+  }
+  .field .hint{
+    font-size:11px;
+    color:#8a8071;
+    margin-top:5px;
+  }
+  input[type=text], select{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    padding:11px 12px;
+    border:none;
+    border-bottom: 2px solid var(--rule);
+    background: transparent;
+    color: var(--ink);
+    outline:none;
+    transition: border-color .15s ease;
+  }
+  input[type=text]:focus, select:focus{
+    border-bottom-color: var(--red-pen);
+  }
+  select{ font-family:'Inter', sans-serif; }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding: 13px 18px;
+    background: var(--ink);
+    color:#F7F1E3;
+    border:none;
+    border-radius: 3px;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:0.3px;
+    cursor:pointer;
+    transition: transform .12s ease, background .15s ease;
+  }
+  .btn:hover{ background:#233863; }
+  .btn:active{ transform: scale(0.98); }
+  .btn.secondary{
+    background:transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+  }
+  .btn.secondary:hover{ background: rgba(27,42,74,0.06); }
+  .btn.danger{ color: var(--red-pen); border-color: var(--red-pen); }
+  .btn-row{ display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .btn-row .btn{ width:auto; flex:1; min-width:140px; }
+
+  .error{
+    color: var(--red-pen);
+    font-size:12px;
+    margin-top:6px;
+    font-weight:600;
+    display:none;
+  }
+  .field.invalid input, .field.invalid select{ border-bottom-color: var(--red-pen); }
+  .field.invalid .error{ display:block; }
+
+  /* ---------- Stamp / signature confirmation ---------- */
+  .stamp-screen{ text-align:center; padding: 30px 10px 10px; }
+  .stamp{
+    width:130px; height:130px; margin: 0 auto 18px;
+    position:relative;
+  }
+  .stamp svg{ width:100%; height:100%; }
+  .stamp-ring{
+    stroke: var(--red-pen);
+    stroke-width: 5;
+    fill:none;
+    stroke-dasharray: 380;
+    stroke-dashoffset: 380;
+    animation: draw-ring .55s ease-out forwards;
+  }
+  .stamp-check{
+    stroke: var(--red-pen);
+    stroke-width: 8;
+    fill:none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+    animation: draw-check .3s ease-out .5s forwards;
+  }
+  @keyframes draw-ring{ to{ stroke-dashoffset:0; } }
+  @keyframes draw-check{ to{ stroke-dashoffset:0; } }
+  @media (prefers-reduced-motion: reduce){
+    .stamp-ring, .stamp-check{ animation: none; stroke-dashoffset:0; }
+  }
+  .stamp-title{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:22px;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+  .stamp-detail{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:#6b6152;
+    line-height:1.7;
+  }
+  .stamp-detail b{ color: var(--ink); }
+
+  .footer-link{
+    text-align:center;
+    margin-top:22px;
+    font-size:11.5px;
+    color:#a39a89;
+  }
+  .footer-link a{ color:#a39a89; text-decoration:underline; cursor:pointer; }
+
+  /* ---------- Admin ---------- */
+  .admin-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
+  .admin-top .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; color:#6b6152;
+  }
+  table.register{
+    width:100%;
+    border-collapse: collapse;
+    font-size:13px;
+    margin-top:8px;
+  }
+  table.register th{
+    text-align:left;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:0.8px;
+    text-transform:uppercase;
+    color:#6b6152;
+    border-bottom: 2px solid var(--ink);
+    padding: 8px 8px;
+  }
+  table.register td{
+    padding: 9px 8px;
+    border-bottom: 1px solid var(--paper-line);
+    color: var(--graphite);
+  }
+  table.register tr:nth-child(even) td{ background: rgba(140,160,190,0.06); }
+  .sno{ font-family:'IBM Plex Mono', monospace; color:#a39a89; width:32px; }
+  .empty-state{
+    text-align:center;
+    padding: 40px 10px;
+    color:#a39a89;
+    font-size:13px;
+  }
+  .qr-box{
+    display:flex; gap:16px; align-items:center;
+    padding: 16px; background: rgba(140,160,190,0.08);
+    border-radius:4px; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .qr-box img{ width:110px; height:110px; border:1px solid var(--paper-line); background:#fff; border-radius:3px; }
+  .qr-box .qr-meta{ flex:1; min-width:180px; }
+  .qr-box .qr-meta p{ margin:0 0 8px; font-size:12px; color:#6b6152; line-height:1.6; }
+
+  .lock-screen{ text-align:center; padding: 30px 10px 10px; }
+  .lock-screen p{ font-size:13px; color:#6b6152; margin-bottom:18px; }
+
+  /* ---------- Print ---------- */
+  @media print{
+    body{ background:#fff; }
+    .no-print{ display:none !important; }
+    .wrap{ max-width:100%; padding:0; }
+    .card{ box-shadow:none; border:none; padding:0; }
+    table.register th, table.register td{ border-bottom:1px solid #999; }
+    .print-header{ display:block !important; }
+  }
+  .print-header{ display:none; margin-bottom:14px; }
+  .print-header h2{ font-family:'Fraunces', serif; margin:0 0 4px; }
+  .print-header .meta{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:#555; }
+  .sign-line{ margin-top:50px; display:flex; justify-content:space-between; font-size:12px; }
+  .sign-line div{ width:45%; border-top:1px solid #444; padding-top:6px; text-align:center; color:#555; }
+
+  #toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px);
+    background: var(--ink); color:#F7F1E3; padding:10px 18px; border-radius:4px;
+    font-size:13px; opacity:0; pointer-events:none; transition: all .25s ease;
+    font-family:'Inter', sans-serif; z-index:50;
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead no-print">
+    <div class="eyebrow">RTU · CS (AI) · Attendance Register</div>
+    <h1 id="mastheadTitle">Attendance</h1>
+    <div class="sub">Scan → Fill → Submit</div>
+  </div>
+
+  <!-- ============ STUDENT FORM VIEW ============ -->
+  <div id="formView" class="card no-print">
+    <div id="formInner">
+      <div class="field" id="f_name">
+        <label>Student Name</label>
+        <input type="text" id="studentName" placeholder="Your full name" autocomplete="name">
+        <div class="error">Please enter your full name.</div>
+      </div>
+      <div class="field" id="f_roll">
+        <label>RTU Roll No.</label>
+        <input type="text" id="roll" placeholder="Your RTU roll number" autocomplete="off" style="text-transform:uppercase;">
+        <div class="error">Please enter a valid roll number.</div>
+      </div>
+
+      <button class="btn" id="submitBtn" onclick="submitAttendance()">Mark My Attendance</button>
+    </div>
+  </div>
+
+  <!-- ============ SUCCESS STAMP VIEW ============ -->
+  <div id="stampView" class="card no-print" style="display:none;">
+    <div class="stamp-screen">
+      <div class="stamp">
+        <svg viewBox="0 0 120 120">
+          <circle class="stamp-ring" cx="60" cy="60" r="52" transform="rotate(-90 60 60)"/>
+          <polyline class="stamp-check" points="38,62 54,78 84,44"/>
+        </svg>
+      </div>
+      <div class="stamp-title">Attendance Marked</div>
+      <div class="stamp-detail" id="stampDetail"></div>
+      <button class="btn secondary" style="width:auto;margin-top:22px;padding:9px 20px;" onclick="resetForm()">Submit Another Response</button>
+    </div>
+  </div>
+
+  <div class="footer-link no-print">
+    <a onclick="openLock()">Teacher / Admin login</a>
+  </div>
+
+  <!-- ============ LOCK SCREEN ============ -->
+  <div id="lockView" class="card no-print" style="display:none;">
+    <div class="lock-screen">
+      <div class="stamp-title" style="font-size:19px;">Admin Access</div>
+      <p>Enter the admin password to view the register.</p>
+      <div class="field" style="text-align:left;">
+        <input type="text" id="adminPass" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()">
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" onclick="closeLock()">Cancel</button>
+        <button class="btn" onclick="checkPassword()">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADMIN VIEW ============ -->
+  <div id="adminView" class="card" style="display:none;">
+    <div class="print-header">
+      <h2>RTU CS (AI) Attendance Register</h2>
+      <div class="meta" id="printMeta"></div>
+    </div>
+
+    <div class="qr-box no-print">
+      <img id="qrImg" src="" alt="QR code" style="display:none;">
+      <div class="qr-meta">
+        <p>Paste the <b>hosted link</b> to this page (from Netlify/GitHub Pages) below to generate the QR code for the question paper.</p>
+        <input type="text" id="shareUrl" placeholder="https://claude.ai/public/artifacts/..." style="margin-bottom:8px;">
+        <button class="btn secondary" style="padding:8px 14px; width:auto; font-size:12.5px;" onclick="generateQR()">Generate QR Code</button>
+      </div>
+    </div>
+
+    <div class="admin-top no-print">
+      <div class="count" id="entryCount">0 entries</div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn secondary" style="width:auto; padding:9px 14px; font-size:12.5px;" onclick="loadEntries()">Refresh</button>
+        <button class="btn secondary" style="width:auto; padding:9px 14px; font-size:12.5px;" onclick="exportExcel()">Export to Excel</button>
+        <button class="btn secondary" style="width:auto; padding:9px 14px; font-size:12.5px;" onclick="window.print()">Print</button>
+        <button class="btn secondary danger" style="width:auto; padding:9px 14px; font-size:12.5px;" onclick="lockAdmin()">Lock</button>
+      </div>
+    </div>
+
+    <div id="tableWrap">
+      <table class="register">
+        <thead>
+          <tr><th class="sno">#</th><th>Student Name</th><th>Roll No.</th><th>Time</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">No attendance submitted yet.</div>
+    </div>
+
+    <div class="sign-line">
+      <div>Faculty Signature</div>
+      <div>Head of Department</div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG — change this password before sharing the link
+// ============================================================
+const ADMIN_PASSWORD = "Exam@2026";
+
+// Paste the Google Apps Script "Web App" URL here after deploying it (see setup steps).
+// It looks like: https://script.google.com/macros/s/XXXXXXXXXXXX/exec
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJCQUYT2nL84NsN-_qrmybp8_x2P4dP3Qc-e3UQpOEihEIltnA-N9mEqG7VnZh6dsBqg/exec";
+
+let entries = [];
+
+// JSONP helper — works around Google Apps Script's CORS restriction on fetch()
+function jsonp(url, params, timeoutMs = 12000){
+  return new Promise((resolve, reject)=>{
+    const cbName = 'jsonp_cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+    let done = false;
+    const cleanup = ()=>{ done = true; delete window[cbName]; script.remove(); clearTimeout(timer); };
+    const timer = setTimeout(()=>{
+      if(!done){ reject(new Error('JSONP timed out')); cleanup(); }
+    }, timeoutMs);
+    window[cbName] = (data)=>{ if(!done){ resolve(data); cleanup(); } };
+    const query = new URLSearchParams({ ...params, callback: cbName }).toString();
+    const script = document.createElement('script');
+    script.src = url + '?' + query;
+    script.onerror = ()=>{ if(!done){ reject(new Error('JSONP request failed')); cleanup(); } };
+    document.body.appendChild(script);
+  });
+}
+
+// Retries a jsonp call a few times before giving up — smooths over flaky mobile connections
+async function jsonpWithRetry(url, params, attempts = 3){
+  let lastErr;
+  for(let i = 0; i < attempts; i++){
+    try{
+      return await jsonp(url, params);
+    }catch(err){
+      lastErr = err;
+      if(i < attempts - 1) await new Promise(r => setTimeout(r, 1200));
+    }
+  }
+  throw lastErr;
+}
+
+// ---------- Toast ----------
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// ---------- Validation ----------
+function setInvalid(id, invalid){
+  document.getElementById('f_'+id).classList.toggle('invalid', invalid);
+}
+
+async function submitAttendance(){
+  const name = document.getElementById('studentName').value.trim().replace(/\s+/g, ' ');
+  const roll = document.getElementById('roll').value.trim().toUpperCase();
+
+  let valid = true;
+  setInvalid('name', name.length < 2); if(name.length < 2) valid = false;
+  setInvalid('roll', roll.length < 4); if(roll.length < 4) valid = false;
+  if(!valid) return;
+
+  const btn = document.getElementById('submitBtn');
+
+  if(SCRIPT_URL.includes('PASTE_YOUR')){
+    toast('Backend not set up yet — see setup steps.');
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  try{
+    const data = await jsonpWithRetry(SCRIPT_URL, { action: 'submit', name, roll });
+
+    if(!data.ok){
+      if(data.error === 'duplicate'){
+        toast('Attendance is already marked today for this roll number.');
+      } else if(data.error === 'invalid'){
+        toast('Please check your name and roll number.');
+      } else {
+        toast('Could not save. Please try again.');
+      }
+      btn.disabled = false; btn.textContent = 'Mark My Attendance';
+      return;
+    }
+
+    const timeStr = new Date().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' });
+    document.getElementById('stampDetail').innerHTML =
+      `<b>${escapeHtml(name)}</b><br>Roll No: <b>${escapeHtml(roll)}</b><br>${timeStr}`;
+    document.getElementById('formView').style.display = 'none';
+    document.getElementById('stampView').style.display = 'block';
+  }catch(err){
+    toast('Poor connection — please try submitting again.');
+    btn.disabled = false; btn.textContent = 'Mark My Attendance';
+  }
+}
+
+function resetForm(){
+  document.getElementById('studentName').value='';
+  document.getElementById('roll').value='';
+  ['name','roll'].forEach(id=>setInvalid(id,false));
+  document.getElementById('submitBtn').disabled=false;
+  document.getElementById('submitBtn').textContent='Mark My Attendance';
+  document.getElementById('stampView').style.display='none';
+  document.getElementById('formView').style.display='block';
+}
+
+// ---------- Admin lock ----------
+function openLock(){
+  document.getElementById('formView').style.display='none';
+  document.getElementById('stampView').style.display='none';
+  document.getElementById('lockView').style.display='block';
+}
+function closeLock(){
+  document.getElementById('lockView').style.display='none';
+  document.getElementById('formView').style.display='block';
+}
+function checkPassword(){
+  const val = document.getElementById('adminPass').value;
+  if(val === ADMIN_PASSWORD){
+    document.getElementById('lockView').style.display='none';
+    document.getElementById('mastheadTitle').textContent = 'Admin Register';
+    document.getElementById('adminView').style.display='block';
+    document.getElementById('printMeta').textContent = 'Generated ' + new Date().toLocaleString('en-IN');
+    loadEntries();
+  } else {
+    toast('Incorrect password.');
+  }
+}
+function lockAdmin(){
+  document.getElementById('adminView').style.display='none';
+  document.getElementById('mastheadTitle').textContent = 'Attendance';
+  document.getElementById('formView').style.display='block';
+}
+
+// ---------- Load & render entries ----------
+async function loadEntries(){
+  document.getElementById('entryCount').textContent = 'Loading…';
+
+  if(SCRIPT_URL.includes('PASTE_YOUR')){
+    document.getElementById('entryCount').textContent = '0 entries';
+    toast('Backend not set up yet — see setup steps.');
+    return;
+  }
+
+  try{
+    const data = await jsonpWithRetry(SCRIPT_URL, {});
+    if(!data.ok) throw new Error('bad response');
+    entries = data.data.map(row => ({
+      name: row['Student Name'] || '',
+      roll: row['Roll No'] || '',
+      time: row['Timestamp'] ? new Date(row['Timestamp']).toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }) : ''
+    }));
+    renderTable();
+  }catch(e){
+    document.getElementById('entryCount').textContent = '0 entries';
+    toast('Could not load entries.');
+  }
+}
+
+function renderTable(){
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  document.getElementById('entryCount').textContent = entries.length + (entries.length===1 ? ' entry' : ' entries');
+  document.getElementById('emptyState').style.display = entries.length ? 'none' : 'block';
+  entries.forEach((e, i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="sno">${i+1}</td><td>${escapeHtml(e.name)}</td><td>${escapeHtml(e.roll)}</td><td>${escapeHtml(e.time)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- Excel export (a copy of what's in the Google Sheet) ----------
+function exportExcel(){
+  if(!entries.length){ toast('No entries to export.'); return; }
+  const rows = entries.map((e,i)=>({
+    'S.No': i+1,
+    'Student Name': e.name,
+    'Roll No': e.roll,
+    'Timestamp': e.time
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:5},{wch:26},{wch:16},{wch:20}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Attendance Log');
+  XLSX.writeFile(wb, 'Attendance_Log_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ---------- QR generation ----------
+function generateQR(){
+  const url = document.getElementById('shareUrl').value.trim();
+  if(!url){ toast('Paste the published link first.'); return; }
+  const img = document.getElementById('qrImg');
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=' + encodeURIComponent(url);
+  img.style.display = 'block';
+}
+</script>
+</body>
+</html>
